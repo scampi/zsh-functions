@@ -1,0 +1,57 @@
+BLACK='\033[30m'
+GREEN='\033[32m'
+END='\033[0m'
+
+if [ $# -ne 4 ]; then
+	echo "help: backport <branch> <issue> <start-commit> <end-commit>"
+	return 1
+fi
+
+local original_branch=$(git status --porcelain -b | head -n 1 | cut -f 2 -d '/')
+local branch=$1
+local issue=$2
+local start=$3
+local end=$4
+
+cecho() {
+	local color=${2:-$BLACK}
+	echo -e "${color}$1${END}"
+}
+
+bail() {
+	if [[ $? -ne 0 ]]; then
+		echo 'something has gone wrong!'
+		return 1
+	fi
+}
+
+cecho "checkout branch $branch to backport" $GREEN
+git checkout branch-$branch
+echo
+bail
+
+cecho 'update the branch' $GREEN
+git pull
+echo
+bail
+
+cecho "create branch BP-$branch-$issue for the commits to backport" $GREEN
+git checkout -b BP-$branch-$issue
+git cherry-pick $start~1..$end
+echo
+bail
+
+cecho "push the new branch" $GREEN
+git push origin BP-$branch-$issue
+echo
+bail
+
+cecho "create the pull request" $GREEN
+hub pull-request -m "$(printf "backport #$issue to $branch\n\nIssue #$issue")" -b branch-$branch
+echo
+bail
+
+# go back to the original branch
+git checkout $original_branch
+
+# vim: set ts=4 sw=4 tw=0 ft=sh noet :

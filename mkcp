@@ -1,0 +1,8 @@
+if [ $# -ne 2 ]; then
+	echo "help: mkcp <sourcepath> <targetpath>"
+	return 1
+fi
+
+local dir=$(dirname $2);
+mkdir -p "$dir" && cp $1 $2;
+# vim: set ts=4 sw=4 tw=0 ft=sh noet :

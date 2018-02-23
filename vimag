@@ -1,0 +1,29 @@
+if [ $# -eq 0 ]; then
+	echo "help: vimag <pattern> [<path>]"
+	return 1
+fi
+
+local pattern=$1
+shift
+
+local searchpath="."
+if [ $# -ne 0 ]; then
+	searchpath=$1
+	shift
+fi
+
+IFS='
+'
+_fzf()
+{
+	fzf-tmux -m --select-1 --exit-0 --bind ctrl-a:select-all,ctrl-d:deselect-all,ctrl-t:toggle-all
+}
+
+local declare files=($(ag $pattern $searchpath "$@" | _fzf | cut -f 1 -d ':' | uniq))
+if [ -n "$files" ]; then
+	echo "Opening ${files[@]}"
+	${EDITOR:-vim} "${files[@]}" -p
+fi
+unset IFS
+
+#  vim: set ft=zsh ts=4 sw=4 tw=0 noet :
