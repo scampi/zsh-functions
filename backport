@@ -28,29 +28,29 @@ bail() {
 
 cecho "checkout branch $branch to backport" $GREEN
 git checkout branch-$branch
-echo
 bail
+echo
 
 cecho 'update the branch' $GREEN
 git pull
-echo
 bail
+echo
 
 cecho "create branch BP-$branch-$issue for the commits to backport" $GREEN
 git checkout -b BP-$branch-$issue
 git cherry-pick $start~1..$end
-echo
 bail
+echo
 
 cecho "push the new branch" $GREEN
 git push origin BP-$branch-$issue
-echo
 bail
+echo
 
 cecho "create the pull request" $GREEN
 hub pull-request -m "$(printf "backport #$issue to $branch\n\nIssue #$issue")" -b branch-$branch
-echo
 bail
+echo
 
 # go back to the original branch
 git checkout $original_branch
