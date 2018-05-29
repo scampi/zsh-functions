@@ -1,4 +1,5 @@
 BLACK='\033[30m'
+RED='\033[31m'
 GREEN='\033[32m'
 END='\033[0m'
 
@@ -19,37 +20,45 @@ cecho() {
 	echo -e "${color}$1${END}"
 }
 
-bail() {
-	if [[ $? -ne 0 ]]; then
-		echo 'something has gone wrong!'
-		return 1
-	fi
-}
-
 cecho "checkout branch $branch to backport" $GREEN
 git checkout branch-$branch
-bail
+if [[ $? -ne 0 ]]; then
+	cecho 'something has gone wrong!' $RED
+	return 1
+fi
 echo
 
 cecho 'update the branch' $GREEN
 git pull
-bail
+if [[ $? -ne 0 ]]; then
+	cecho 'something has gone wrong!' $RED
+	return 1
+fi
 echo
 
 cecho "create branch BP-$branch-$issue for the commits to backport" $GREEN
 git checkout -b BP-$branch-$issue
 git cherry-pick $start~1..$end
-bail
+if [[ $? -ne 0 ]]; then
+	cecho 'something has gone wrong!' $RED
+	return 1
+fi
 echo
 
 cecho "push the new branch" $GREEN
 git push origin BP-$branch-$issue
-bail
+if [[ $? -ne 0 ]]; then
+	cecho 'something has gone wrong!' $RED
+	return 1
+fi
 echo
 
 cecho "create the pull request" $GREEN
 hub pull-request -m "$(printf "backport #$issue to $branch\n\nIssue #$issue")" -b branch-$branch
-bail
+if [[ $? -ne 0 ]]; then
+	cecho 'something has gone wrong!' $RED
+	return 1
+fi
 echo
 
 # go back to the original branch
