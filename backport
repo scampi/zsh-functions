@@ -5,6 +5,7 @@ END='\033[0m'
 
 if [ $# -ne 4 ]; then
 	echo "help: backport <branch> <issue> <start-commit> <end-commit>"
+	echo "<branch> may be equal to master instead of a version number."
 	return 1
 fi
 
@@ -21,7 +22,11 @@ cecho() {
 }
 
 cecho "checkout branch $branch to backport" $GREEN
-git checkout branch-$branch
+if [[ $branch = "master" ]]; then
+	git checkout master
+else
+	git checkout branch-$branch
+fi
 if [[ $? -ne 0 ]]; then
 	cecho 'something has gone wrong!' $RED
 	return 1
@@ -54,7 +59,11 @@ fi
 echo
 
 cecho "create the pull request" $GREEN
-hub pull-request -m "$(printf "backport #$issue to $branch\n\nIssue #$issue")" -b branch-$branch
+if [[ $branch = "master" ]]; then
+	hub pull-request -m "$(printf "backport #$issue to $branch\n\nIssue #$issue")" -b master
+else
+	hub pull-request -m "$(printf "backport #$issue to $branch\n\nIssue #$issue")" -b branch-$branch
+fi
 if [[ $? -ne 0 ]]; then
 	cecho 'something has gone wrong!' $RED
 	return 1
