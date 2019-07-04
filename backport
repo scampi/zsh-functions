@@ -5,7 +5,7 @@ END='\033[0m'
 
 if [ $# -ne 4 ]; then
 	echo "help: backport <branch> <issue> <start-commit> <end-commit>"
-	echo "<branch> may be equal to master instead of a version number."
+	echo "<branch> may be equal to master or integration instead of a version number."
 	return 1
 fi
 
@@ -21,12 +21,12 @@ cecho() {
 	echo -e "${color}$1${END}"
 }
 
-cecho "checkout branch $branch to backport" $GREEN
-if [[ $branch = "master" ]]; then
-	git checkout master
-else
-	git checkout branch-$branch
+if [[ $branch != "master" ]] && [[ $branch != "integration" ]]; then
+	branch="branch-$branch"
 fi
+
+cecho "checkout branch $branch to backport" $GREEN
+git checkout $branch
 if [[ $? -ne 0 ]]; then
 	cecho 'something has gone wrong!' $RED
 	return 1
@@ -43,9 +43,24 @@ echo
 
 cecho "create branch BP-$branch-$issue for the commits to backport" $GREEN
 git checkout -b BP-$branch-$issue
-git cherry-pick $start~1..$end
+git cherry-pick -x $start~1..$end
+if [[ $? -ne 0 ]]; then
+	git mergetool
+	if [[ $? -ne 0 ]]; then
+		cecho 'something has gone wrong!' $RED
+		return 1
+	fi
+	git cherry-pick --continue
+fi
+echo
+
+local pr_body=$(printf "backport #$issue to $branch\n\nIssue #$issue")
+
+cecho "check the branch compiles with new changes" $GREEN
+mvn clean test-compile compile
 if [[ $? -ne 0 ]]; then
 	cecho 'something has gone wrong!' $RED
+	cecho "Fix then create PR with: hub pull-request -m \"$pr_body\" -b $branch" $RED
 	return 1
 fi
 echo
@@ -59,11 +74,7 @@ fi
 echo
 
 cecho "create the pull request" $GREEN
-if [[ $branch = "master" ]]; then
-	hub pull-request -m "$(printf "backport #$issue to $branch\n\nIssue #$issue")" -b master
-else
-	hub pull-request -m "$(printf "backport #$issue to $branch\n\nIssue #$issue")" -b branch-$branch
-fi
+hub pull-request -m "$pr_body" -b $branch
 if [[ $? -ne 0 ]]; then
 	cecho 'something has gone wrong!' $RED
 	return 1
